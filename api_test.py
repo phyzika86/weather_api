@@ -11,7 +11,7 @@ def check_api():
     from external.client import YandexWeatherAPI
     from utils import get_url_by_city_name
 
-    CITY_NAME_FOR_TEST = "MOSCOW"
+    CITY_NAME_FOR_TEST = "KAZAN"
 
     data_url = get_url_by_city_name(CITY_NAME_FOR_TEST)
     resp = YandexWeatherAPI.get_forecasting(data_url)

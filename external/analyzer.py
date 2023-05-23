@@ -1,3 +1,4 @@
+from __future__ import annotations
 import argparse
 import json
 import logging
@@ -5,6 +6,7 @@ from dataclasses import dataclass, field
 from functools import reduce
 from operator import getitem
 from typing import Optional, List, Dict
+from multiprocessing import current_process
 
 PATH_FROM_INPUT = "./../examples/response.json"
 PATH_TO_OUTPUT = "./../examples/output.json"
@@ -42,6 +44,7 @@ INPUT_DAY_SUITABLE_CONDITIONS = [
 
 OUTPUT_RAW_DATA_KEY = "raw_data"
 OUTPUT_DAYS_KEY = "days"
+OUTPUT_CITY_KEY = "city"
 DEFAULT_OUTPUT_RESULT = {
     OUTPUT_DAYS_KEY: [],
     # OUTPUT_RAW_DATA_KEY: None,
@@ -176,8 +179,16 @@ class DayInfo:
 
 
 def analyze_json(data):
+    import logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(name)s - %(levelname)s - %(message)s')
+    data = data.get()
+    city, data = list(data.items())[0]
+    pid_process = current_process().pid
+    name_process = current_process().name
+    logging.info(f'Процесс {name_process} производит анализ для города: {city}')
     if not data:
         logging.warning("Input data is empty...")
+        logging.info(f'Процесс {name_process} закончил анализ для города: {city}')
         return {}
 
     # analyzing days
@@ -199,6 +210,8 @@ def analyze_json(data):
     result = DEFAULT_OUTPUT_RESULT
     # result[OUTPUT_RAW_DATA_KEY] = data
     result[OUTPUT_DAYS_KEY] = days
+    result[OUTPUT_CITY_KEY] = city
+    logging.info(f'Процесс {name_process} закончил анализ для города: {city}')
     return result
 
 
