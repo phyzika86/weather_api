@@ -3,38 +3,42 @@ from utils import get_url_by_city_name, CITIES
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from external.analyzer import analyze_json
-from multiprocessing import Pool, Manager
+from multiprocessing import Pool, Manager, cpu_count
 import json
 from dataclasses import dataclass
-from typing import Optional, List, Dict
+from typing import Dict
 from queue import Queue
 from time import sleep
-
-PATH_TO_OUTPUT = "./result_table/output.json"
+from config import PATH_TO_OUTPUT
 
 
 @dataclass
 class DataFetchingTask:
-    cities: List
+    cities: Dict
 
     def __init__(self, cities):
         self.cities = cities
 
     @staticmethod
-    def fetch_url(city_name):
+    def fetch_url(city_name: str) -> dict:
         url = get_url_by_city_name(city_name)
 
         logging.info('Начал получать данные погоды для города: %s (url: %s)', city_name, url)
         try:
             resp = YandexWeatherAPI.get_forecasting(url)
             sleep(0.1)
+        except Exception as e:
+            resp = {}
+            logging.info('Для города: %s (url: %s) произошла ошибка %s', city_name, url, e)
         except:
             resp = {}
-            logging.info('Закончил получать данные погоды для города: %s (url: %s)', city_name, url)
+            logging.info('В результате получения данных для города: %s (url: %s) произошла неизвестная ошибка',
+                         city_name, url)
+
         return {city_name: resp}
 
     @staticmethod
-    def get_data(cities):
+    def get_data(cities: dict):
         cities = list(cities.keys())
         fetch_url = DataFetchingTask.fetch_url
         with ThreadPoolExecutor() as pool:
@@ -54,7 +58,7 @@ class DataCalculationTask:
 
     def run(self):
         logging.info('Начал вычислять среднюю температуру для всех данных городов')
-        with Pool(4) as pool:
+        with Pool(cpu_count() - 1) as pool:
             while queue.qsize():
                 res = pool.apply_async(analyze_json, [queue])
                 res = res.get()
@@ -89,7 +93,7 @@ class DataAggregationTask:
         pass
 
     @staticmethod
-    def write_in_file(data):
+    def write_in_file(data: list):
         with open(PATH_TO_OUTPUT, mode="w") as file:
             formatted_data = json.dumps(data, indent=2)
             file.write(formatted_data)
@@ -126,8 +130,8 @@ if __name__ == '__main__':
     m = Manager()
     queue = m.Queue()
     res = []
-
-    for weather in weathers.get_data(weathers.cities):
+    cities_with_data = weathers.cities
+    for weather in weathers.get_data(cities_with_data):
         queue.put(weather)
     logging.info('Закончил получать данные')
     analyze_data = DataAnalyzingTask()
@@ -136,4 +140,3 @@ if __name__ == '__main__':
     DataAggregationTask.write_in_file(analyze_data.result)
     logging.info('Закончил запись агрегированных данныхв файл')
     logging.info(f'Лучший город {analyze_data.best_city.get("city")}')
-
