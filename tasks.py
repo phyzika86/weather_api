@@ -37,10 +37,6 @@ class DataFetchingTask:
         except Exception as e:
             resp = {}
             logging.exception('Для города: %s (url: %s) произошла ошибка: %s', city_name, url, e)
-        except:
-            resp = {}
-            logging.exception('В результате получения данных для города: %s (url: %s) произошла неизвестная ошибка',
-                              city_name, url)
 
         return {city_name: resp}
 
