@@ -10,6 +10,7 @@ from typing import Dict
 from queue import Queue
 from time import sleep
 from config import PATH_TO_OUTPUT
+from api_exception import ApiException, URLNotFoundException
 
 
 @dataclass
@@ -27,13 +28,19 @@ class DataFetchingTask:
         try:
             resp = YandexWeatherAPI.get_forecasting(url)
             sleep(0.1)
+        except ApiException as e:
+            resp = {}
+            logging.exception('Для города: %s (url: %s) произошла ошибка в данных: %s', city_name, url, e)
+        except URLNotFoundException as e:
+            resp = {}
+            logging.exception('Для города: %s (url: %s) произошла ошибка c url: %s', city_name, url, e)
         except Exception as e:
             resp = {}
-            logging.info('Для города: %s (url: %s) произошла ошибка %s', city_name, url, e)
+            logging.exception('Для города: %s (url: %s) произошла ошибка: %s', city_name, url, e)
         except:
             resp = {}
-            logging.info('В результате получения данных для города: %s (url: %s) произошла неизвестная ошибка',
-                         city_name, url)
+            logging.exception('В результате получения данных для города: %s (url: %s) произошла неизвестная ошибка',
+                              city_name, url)
 
         return {city_name: resp}
 

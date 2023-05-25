@@ -2,9 +2,11 @@ import json
 import logging
 from http import HTTPStatus
 from urllib.request import urlopen
+from urllib.error import HTTPError
+from json import JSONDecodeError
+from api_exception import ApiException, URLNotFoundException
 
 ERR_MESSAGE_TEMPLATE = "Unexpected error: {error}"
-
 
 logger = logging.getLogger()
 
@@ -30,7 +32,13 @@ class YandexWeatherAPI:
             return data
         except Exception as ex:
             logger.error(ex)
-            raise Exception(ERR_MESSAGE_TEMPLATE.format(error=ex))
+            if issubclass(ex.__class__, JSONDecodeError):
+                raise ApiException(
+                    f'Ошибка в данных json от сервера {ERR_MESSAGE_TEMPLATE.format(error=ex)}')
+            if issubclass(ex.__class__, HTTPError):
+                raise URLNotFoundException(f'Возможно неверный url {ERR_MESSAGE_TEMPLATE.format(error=ex)}')
+            else:
+                raise Exception(ERR_MESSAGE_TEMPLATE.format(error=ex))
 
     @staticmethod
     def get_forecasting(url: str):
